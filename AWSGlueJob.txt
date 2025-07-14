@@ -1,0 +1,22 @@
+#DATA SCRAMBLING using AWS Glue.
+#AWS Glue is flexible but does not handle referential integrity automatically. You must:
+#Manually maintain mapping between original and scrambled keys.
+#Ensure consistency across joins and table transformations.
+#Write custom logic in PySpark/Scala for mapping or pseudonymization.
+
+# Load parent table
+users_df = glueContext.create_dynamic_frame.from_catalog(...)
+
+# Create ID mapping
+from pyspark.sql.functions import monotonically_increasing_id
+id_mapping = users_df.select("user_id").dropDuplicates()
+id_mapping = id_mapping.withColumn("fake_user_id", monotonically_increasing_id())
+
+# Join with parent
+users_masked = users_df.join(id_mapping, on="user_id", how="inner")
+
+# Load child table
+orders_df = glueContext.create_dynamic_frame.from_catalog(...)
+
+# Join with ID map to replace foreign key
+orders_masked = orders_df.join(id_mapping, on="user_id", how="inner")
